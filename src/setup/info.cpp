@@ -314,7 +314,8 @@ void info::load(std::istream & is, entry_types entries, util::codepage_id force_
 		checksum.init();
 		boost::uint8_t encryption_use = checksum.load<boost::uint8_t>(is);
 		if(encryption_use != 0) {
-			log_warning << "Encrypted setup not supported; cannot decrypt files";
+			// Local adapter build: do not discard the new encryption flag and continue as plaintext.
+			throw std::runtime_error("Encrypted installers are unsupported");
 		}
 		// 16-byte KDFSalt + 4-byte KDFIterations
 		// + 8-byte BaseNonce.RandomXorStartOffset
@@ -331,8 +332,8 @@ void info::load(std::istream & is, entry_types entries, util::codepage_id force_
 			(void)checksum.load<boost::uint32_t>(is);
 		}
 		(void)checksum.load<boost::uint32_t>(is);
-		if(checksum.finalize() != expected_crc) {
-			log_warning << "Encryption header checksum mismatch!";
+		if(!is || checksum.finalize() != expected_crc) {
+			throw std::runtime_error("Encryption header checksum mismatch");
 		}
 	}
 	
