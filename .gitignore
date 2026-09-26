@@ -1,0 +1,4 @@
+
+# Python regression tests
+__pycache__/
+*.py[cod]
