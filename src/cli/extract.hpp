@@ -48,6 +48,7 @@ enum CollisionAction {
 
 struct extract_options {
 	
+	bool decompiler_stream; // Local stdout-only adapter, never creates output paths.
 	bool quiet;
 	bool silent;
 	
@@ -92,7 +93,8 @@ struct extract_options {
 	boost::filesystem::path output_dir;
 	
 	extract_options()
-		: quiet(false)
+		: decompiler_stream(false)
+		, quiet(false)
 		, silent(false)
 		, warn_unused(false)
 		, list_sizes(false)

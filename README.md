@@ -1,3 +1,5 @@
+> This fork provides the decompiler.com stdout extraction adapter. See [DECOMPILER.md](DECOMPILER.md) for the protocol, build, tests, and upstream base.
+
 
 
 

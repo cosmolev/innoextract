@@ -1,0 +1,33 @@
+name: Decompiler adapter
+on:
+  push:
+    branches: [decompiler]
+  pull_request:
+    branches: [decompiler]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake libboost-all-dev liblzma-dev zlib1g-dev libbz2-dev
+      - name: macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install boost xz
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_LTO=OFF -DBUILD_TESTS=ON -DBUILD_DECRYPTION=OFF
+          cmake --build build -j2
+      - name: Upstream unit tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Stream corpus and failure tests
+        run: bash tests/decompiler/run.sh "$PWD/build/innoextract"

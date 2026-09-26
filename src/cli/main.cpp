@@ -130,6 +130,7 @@ int main(int argc, char * argv[]) {
 	
 	po::options_description action("Actions");
 	action.add_options()
+		("decompiler-stream", "Local framed stdout-only extraction adapter")
 		("test,t", "Only verify checksums, don't write anything")
 		("extract,e", "Extract files (default action)")
 		("list,l", "Only list files, don't write anything")
@@ -253,13 +254,25 @@ int main(int argc, char * argv[]) {
 		return ExitSuccess;
 	}
 	
+	// Local stream mode is exclusive: never enable a filesystem-writing action.
+	if(options.count("decompiler-stream")) {
+		if(options.count("extract") || options.count("gog") || options.count("dump-headers")
+		   || options.count("list") || options.count("list-sizes") || options.count("list-checksums")
+		   || options.count("info") || options.count("data-version") || options.count("list-languages")
+		   || options.count("gog-game-id") || options.count("show-password") || options.count("check-password")) {
+			std::cerr << "Incompatible stream options\n"; return 1;
+		}
+		o.decompiler_stream = true;
+		o.silent = o.quiet = logger::quiet = true;
+		progress::set_enabled(false);
+	}
 	// Main action.
 	o.list_sizes = (options.count("list-sizes") != 0);
 	o.list_checksums = (options.count("list-checksums") != 0);
 	bool explicit_list = (options.count("list") != 0);
 	o.list = explicit_list || o.list_sizes || o.list_checksums;
 	o.extract = (options.count("extract") != 0);
-	o.test = (options.count("test") != 0);
+	o.test = o.decompiler_stream || (options.count("test") != 0);
 	o.list_languages = (options.count("list-languages") != 0);
 	o.gog_game_id = (options.count("gog-game-id") != 0);
 	o.show_password = (options.count("show-password") != 0);

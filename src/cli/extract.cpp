@@ -1049,6 +1049,18 @@ void process_file(const fs::path & installer, const extract_options & o) {
 		std::cout << "Files:\n";
 	}
 	
+	if(o.decompiler_stream) {
+		if(o.extract || o.list || o.gog || o.gog_galaxy || o.data_version) {
+			throw std::runtime_error("Incompatible stream options");
+		}
+		if(!offsets.data_offset) {
+			throw std::runtime_error("Missing external Inno data slice; only embedded payloads supported");
+		}
+		if(info.header.options & setup::header::EncryptionUsed) {
+			throw std::runtime_error("Encrypted installers are unsupported");
+		}
+		std::cout << "IEX1\n";
+	}
 	processed_entries processed = filter_entries(o, info);
 	
 	if(o.extract) {
@@ -1279,6 +1291,48 @@ void process_file(const fs::path & installer, const extract_options & o) {
 			stream::file_reader::pointer file_source;
 			file_source = stream::file_reader::get(*chunk_source, file, &checksum);
 			
+			// Local adapter: native code writes only framed bytes to stdout. The Java publisher
+			// validates paths and budgets. A trailer is emitted only after checksum verification.
+			if(o.decompiler_stream) {
+				BOOST_FOREACH(const output_location & output, output_locations) {
+					if(output.second != 0 || output.first->is_multipart()) {
+						throw std::runtime_error("Multipart Inno members are unsupported");
+					}
+				}
+				const setup::data_entry & data = info.data_entries[location.second];
+				std::cout << output_locations.size() << '\n' << data.uncompressed_size << '\n';
+				BOOST_FOREACH(const output_location & output, output_locations) {
+					const std::string & name = output.first->path();
+					std::cout << name.size() << '\n';
+					std::cout.write(name.data(), std::streamsize(name.size()));
+				}
+				boost::ptr_vector<crypto::hasher> member_checksums;
+				BOOST_FOREACH(const output_location & output, output_locations) {
+					member_checksums.push_back(new crypto::hasher(output.first->entry().checksum.type));
+				}
+				boost::uint64_t written = 0;
+				while(!file_source->eof()) {
+					char buffer[65536];
+					std::streamsize n = file_source->read(buffer, sizeof(buffer)).gcount();
+					if(n > 0) {
+						std::cout.write(buffer, n); written += boost::uint64_t(n);
+						BOOST_FOREACH(crypto::hasher & hash, member_checksums) { hash.update(buffer, size_t(n)); }
+					}
+					if(!std::cout) throw std::runtime_error("Stream output failed");
+				}
+				if(written != data.uncompressed_size || checksum != file.checksum) {
+					throw std::runtime_error("Inno stream integrity check failed");
+				}
+				for(size_t i = 0; i < output_locations.size(); ++i) {
+					const setup::file_entry & entry = output_locations[i].first->entry();
+					if((entry.size != 0 && entry.size != written)
+					   || member_checksums[i].finalize() != entry.checksum) {
+						throw std::runtime_error("Inno member integrity check failed");
+					}
+				}
+				std::cout << "OK!\n";
+				continue;
+			}
 			// Open output files
 			boost::ptr_vector<file_output> single_outputs;
 			typedef std::pair<file_output *, boost::uint64_t> file_output_location;
