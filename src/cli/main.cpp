@@ -260,7 +260,8 @@ int main(int argc, char * argv[]) {
 		   || options.count("list") || options.count("list-sizes") || options.count("list-checksums")
 		   || options.count("info") || options.count("data-version") || options.count("list-languages")
 		   || options.count("gog-game-id") || options.count("show-password") || options.count("check-password")) {
-			std::cerr << "Incompatible stream options\n"; return 1;
+			std::cerr << "Incompatible stream options\n";
+			return 1;
 		}
 		o.decompiler_stream = true;
 		o.silent = o.quiet = logger::quiet = true;

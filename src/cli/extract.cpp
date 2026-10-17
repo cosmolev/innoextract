@@ -1315,7 +1315,8 @@ void process_file(const fs::path & installer, const extract_options & o) {
 					char buffer[65536];
 					std::streamsize n = file_source->read(buffer, sizeof(buffer)).gcount();
 					if(n > 0) {
-						std::cout.write(buffer, n); written += boost::uint64_t(n);
+						std::cout.write(buffer, n);
+						written += boost::uint64_t(n);
 						BOOST_FOREACH(crypto::hasher & hash, member_checksums) { hash.update(buffer, size_t(n)); }
 					}
 					if(!std::cout) throw std::runtime_error("Stream output failed");
