@@ -173,20 +173,25 @@ else()
 	set(INNOEXTRACT_HAVE_LZMA 0)
 endif()
 
-find_package(Boost REQUIRED COMPONENTS
-	iostreams
-	filesystem
-	date_time
-	system
-	program_options
-)
-list(APPEND LIBRARIES ${Boost_LIBRARIES})
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(SYSTEM ${Boost_INCLUDE_DIR})
+find_package(Boost REQUIRED)
 if(NOT Boost_VERSION_MACRO)
 	# CMP0093 changed Boost_VERSION to x.y.z format and provide the old format in Boost_VERSION_MACRO
 	set(Boost_VERSION_MACRO ${Boost_VERSION})
 endif()
+set(BOOST_COMPONENTS
+	iostreams
+	filesystem
+	date_time
+	program_options
+)
+# Boost.System has been header-only since 1.69; its stub library was removed in 1.89.
+if(Boost_VERSION_MACRO LESS 106900)
+	list(APPEND BOOST_COMPONENTS system)
+endif()
+find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
+list(APPEND LIBRARIES ${Boost_LIBRARIES})
+link_directories(${Boost_LIBRARY_DIRS})
+include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 add_definitions(-DBOOST_SYSTEM_DISABLE_THREADS)
 if(win32)
 	add_definitions(-DBOOST_SYSTEM_USE_UTF8)

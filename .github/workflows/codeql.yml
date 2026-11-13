@@ -1,8 +1,11 @@
 name: CodeQL
 
 on:
-  schedule:
-    - cron: '21 11 * * 5'
+  push:
+    branches: [ decompiler ]
+  pull_request:
+    branches: [ decompiler ]
+  workflow_dispatch:
 
 jobs:
 
